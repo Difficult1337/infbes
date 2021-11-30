@@ -1,0 +1,213 @@
+import java.util.*;
+import java.math.*;
+import java.io.*;
+import java.security.*;
+import java.text.*;
+
+
+class RSAKey {
+BigInteger d;
+BigInteger e;
+BigInteger n;
+int bitLength;
+}
+class CipherText {
+ArrayList<BigInteger> encryptedBlocks;
+int fileLength;
+int blockLength;
+CipherText() {
+encryptedBlocks = new ArrayList<BigInteger>();
+}
+}
+public class ghg {
+static boolean verbose = false;
+static boolean showPandQ = false;
+final static String hashAlgorithm = "SHA-256";
+static void writeKeyToFile (RSAKey key, String keyName) throws Exception {
+if ( key.e != null ) { // it's a public key
+PrintStream output = new PrintStream(new File(keyName+"-public.key"));
+output.println("public\n" + key.bitLength + "\n" + key.e + "\n" + key.n);
+output.close();
+}
+if ( key.d != null ) { // it's a private key
+PrintStream output = new PrintStream(new File(keyName+"-private.key"));
+output.println("private\n" + key.bitLength + "\n" + key.d + "\n" + key.n);
+output.close();
+}
+}
+
+static RSAKey readKeyFromFile (String filename) throws Exception {
+Scanner filein = new Scanner(new File(filename));
+RSAKey key = new RSAKey();
+boolean isPublic = filein.next().equals("public");
+key.bitLength = filein.nextInt();
+if ( isPublic )
+key.e = new BigInteger(filein.next());
+else
+key.d = new BigInteger(filein.next());
+key.n = new BigInteger(filein.next());
+return key;
+}
+
+static CipherText readCipherTextFromFile (String filename) throws Exception {
+Scanner filein = new Scanner(new File(filename));
+CipherText c = new CipherText();
+c.fileLength = filein.nextInt();
+c.blockLength = filein.nextInt();
+while ( filein.hasNext() ) {
+String num = filein.next();
+if ( num != "" )
+c.encryptedBlocks.add(new BigInteger(num));
+}
+return c;
+}
+
+static void writeCipherTextToFile (String filename, CipherText cipherText) throws Exception {
+PrintStream output = new PrintStream(new File(filename));
+output.println(cipherText.fileLength + " " + cipherText.blockLength);
+for ( BigInteger num: cipherText.encryptedBlocks )
+output.println(num);
+output.close();
+}
+
+static String getFileContents (String filename) throws Exception {
+File file = new File(filename);
+long fileLength = file.length();
+FileInputStream fin = new FileInputStream(file);
+byte[] data = new byte[(int)fileLength];
+fin.read(data);
+fin.close();
+return new String(data);
+}
+
+static String convertHash (byte hash[]) {
+int hashSize = 0;
+try {
+hashSize = MessageDigest.getInstance(hashAlgorithm).getDigestLength() * 2;
+} catch (Exception e) {
+System.out.println ("Your Java installation does not support the '" + hashAlgorithm +
+"' hashing method; change that in RSA.java to continue.");
+System.exit(1);
+}
+char chash[] = new char[hashSize];
+for ( int i = 0; i < hashSize/2; i++ ) {
+int hashValue = hash[i];
+if ( hashValue < 0 )
+hashValue += 256;
+if ( hashValue/16 < 10 )
+chash[2*i] = (char) ('0' + hashValue/16);
+else
+chash[2*i] = (char) ('a' + hashValue/16 - 10);
+if ( hashValue%16 < 10 )
+chash[2*i+1] = (char) ('0' + hashValue%16);
+else
+chash[2*i+1] = (char) ('a' + hashValue%16 - 10);
+}
+return new String(chash);
+}
+public static BigInteger convertFromASCII(String text) {
+// your code here; a dummy return statement is put below to allow this to compile
+return null;
+}
+public static String convertToASCII(BigInteger block) {
+return null;
+}
+
+public static RSAKey generateKeys (int bitLength, int seed) throws Exception {
+Random random = new Random();
+if ( seed != 0 )
+random = new Random(seed);
+return null;
+}
+
+public static CipherText encrypt (RSAKey key, String plainText) throws Exception {
+return null;
+}
+
+public static String decrypt (RSAKey key, CipherText cipherText) throws Exception {
+return null;
+}
+public static RSAKey crack (RSAKey key) throws Exception {
+return null;
+}
+public static CipherText sign (RSAKey key, String plainText) throws Exception {
+return null;
+public static boolean checkSign (RSAKey key, String plainText, CipherText signature) throws Exception {
+return false;
+}
+public static void main (String[] args) throws Exception {
+String outputFileName = "output.txt", inputFileName = "input.txt", keyName = "default";
+int seed = 0;
+
+for ( int i = 0; i < args.length; i++ ) {
+
+if ( args[i].equals("-verbose") )
+verbose = !verbose;
+
+else if ( args[i].equals("-output") )
+outputFileName = args[++i];
+
+else if ( args[i].equals("-input") )
+inputFileName = args[++i];
+
+else if ( args[i].equals("-key") )
+keyName = args[++i];
+
+else if ( args[i].equals("-showpandq") )
+showPandQ = true;
+
+else if ( args[i].equals("-keygen") ) {
+int bitLength = Integer.parseInt(args[++i]);
+RSAKey key = generateKeys(bitLength, seed);
+writeKeyToFile (key,keyName);
+}
+
+else if ( args[i].equals("-encrypt") ) {
+RSAKey key = readKeyFromFile (keyName + "-public.key");
+String plainText = getFileContents(inputFileName);
+CipherText cipherText = encrypt(key, plainText);
+writeCipherTextToFile(outputFileName, cipherText);
+}
+
+else if ( args[i].equals("-decrypt") ) {
+RSAKey key = readKeyFromFile (keyName + "-private.key");
+CipherText cipherText = readCipherTextFromFile(inputFileName);
+String plainText = decrypt(key, cipherText);
+PrintWriter fileout = new PrintWriter(outputFileName);
+fileout.print(plainText);
+fileout.close();
+}
+
+else if ( args[i].equals("-sign") ) {
+RSAKey key = readKeyFromFile (keyName + "-private.key");
+String plainText = getFileContents(inputFileName);
+CipherText signature = sign(key,plainText);
+writeCipherTextToFile(inputFileName+".sign", signature);
+}
+
+else if ( args[i].equals("-checksign") ) {
+RSAKey key = readKeyFromFile (keyName + "-public.key");
+String plainText = getFileContents(inputFileName);
+CipherText signature = readCipherTextFromFile(inputFileName+".sign");
+boolean result = checkSign(key,plainText,signature);
+if ( !result )
+System.out.println("Signatures do not match!");
+}
+
+else if ( args[i].equals("-crack") ) {
+RSAKey key = readKeyFromFile (keyName + "-public.key");
+RSAKey crack = crack(key);
+writeKeyToFile (crack,keyName+"-cracked");
+}
+
+else if ( args[i].equals("-seed") )
+seed = Integer.parseInt(args[++i]);
+
+else {
+System.out.println("Unknown parameter: '" + args[i] + "', exiting.");
+System.exit(1);
+}
+
+}
+}
+}
